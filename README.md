@@ -1,58 +1,230 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<div align="center">
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+# Dr.Code — Clinic Management & Online Booking System
+### نظام إدارة العيادات الطبية والحجز الإلكتروني
+
+A modern, full-stack clinic management system and Arabic RTL patient booking portal built with **Laravel 13**, **Filament 5**, **Tailwind CSS 4**, and **Pest 5**.
+
+<p>
+  <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
+  <img src="https://img.shields.io/badge/PHP-8.4+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.4">
+  <img src="https://img.shields.io/badge/Filament-5.x-FDAE4B?style=for-the-badge&logo=filament&logoColor=black" alt="Filament 5">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
+  <img src="https://img.shields.io/badge/Pest-5.x-7F52FF?style=for-the-badge&logo=pest&logoColor=white" alt="Pest 5">
+  <img src="https://img.shields.io/badge/License-MIT-10B981?style=for-the-badge" alt="MIT License">
 </p>
 
-## About Laravel
+[Overview](#-overview) •
+[Features](#-key-features) •
+[Workflow](#-end-to-end-workflow) •
+[Tech Stack](#-tech-stack) •
+[Installation](#-installation--setup) •
+[Testing](#-testing--code-quality)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+</div>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Overview
 
-## Learning Laravel
+**Dr.Code** bridges the gap between patients and clinic administration in one unified platform:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+1. **Patients** book appointments online in seconds, receive an instant queue number (`#queue_number`) and medical file code (`PAT-YYYY-XXXX`), print their booking ticket, and track or cancel their visit online.
+2. **Clinic Reception & Doctors** receive real-time in-panel notifications for every new online booking or cancellation, manage the daily queue from check-in to consultation, collect fees with invoices, and print Arabic A5 PDF prescriptions.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Key Features
 
-## Agentic Development
+### Patient Portal (Arabic RTL)
+- **Instant Online Booking (`/`)**: Clean booking form with visit type selection (`كشف جديد`, `إعادة / متابعة`, `استشارة`), transparent fees, date validation, and optional complaint/notes.
+- **Smart Patient Matching**: Automatically links returning patients by normalized phone number or creates a new patient record with an auto-generated sequential code (`PAT-2026-0001`).
+- **Duplicate Booking Protection**: Prevents double-booking an active appointment for the same patient on the same date.
+- **Signed Confirmation Ticket (`/appointments/confirmation/{appointment}`)**: Cryptographically signed confirmation page with queue number, patient code, visit details, and print-friendly layout (`window.print()`).
+- **Booking Tracker & Self-Cancellation (`/appointments/track`)**: Patients can look up their bookings by phone number or patient code, monitor live status, and cancel `Booked` appointments via signed URLs.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Clinic Administration (Filament 5 Panel — `/admin`)
+- **Real-Time Database Notifications**: Admins receive instant notifications (with 30s polling and unread badge) whenever a patient books or cancels online, complete with a direct link to the appointment record.
+- **Appointments & Queue Management**:
+  - Dedicated Filament tabs: **الكل (All)**, **مواعيد اليوم (Today)**, **الحجوزات الإلكترونية (Online)**, and **القادمة (Upcoming)**.
+  - Sidebar badge displaying upcoming booked appointments.
+  - One-click workflow actions: **Check-in (`تسجيل وصول`)**, **Start Consultation (`بدء الكشف`)**, **Collect Fee (`تحصيل الرسوم`)**, and **Cancel (`إلغاء`)**.
+  - Concurrency-safe daily queue numbering using database transactions and row locking (`lockForUpdate`).
+- **Electronic Medical Records (EMR)**: Full patient profiles (`code`, `phone`, `national_id`, `birth_date`, `gender`, `blood_group`, `medical_history`, `notes`).
+- **Consultations & Prescriptions**: Record vitals, chief complaint, diagnosis, internal notes, general advice, and structured prescription items linked to a seeded medicine catalog.
+- **Arabic A5 PDF Prescriptions**: One-click printable A5 medical prescriptions rendered with full Arabic RTL text shaping via `mPDF`.
+- **Treasury & Invoicing**: Collect appointment fees (Cash / Electronic payment methods), auto-generate invoices, and monitor daily cash vs. electronic revenue and queue stats on the dashboard (`ClinicStatsOverview`).
 
-```bash
-composer require laravel/boost --dev
+---
 
-php artisan boost:install
+## End-to-End Workflow
+
+```mermaid
+flowchart LR
+    P["Patient Portal (/)"] -->|"Books Online"| A["CreateOnlineBookingAction"]
+    A -->|"Find/Create Patient + Assign Queue #"| DB[("MySQL Database")]
+    A -->|"Database Notification"| N["Admin Panel Bell (/admin)"]
+    A -->|"Signed Redirect"| T["Printable Ticket & Tracker"]
+    N -->|"Check-in"| W["Waiting Room"]
+    W -->|"Start Consultation"| C["Doctor Consultation"]
+    C -->|"Complete"| RX["A5 Arabic PDF Prescription"]
+    W -->|"Collect Fee"| INV["Invoice & Daily Treasury"]
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## Tech Stack
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Layer | Technology |
+| :--- | :--- |
+| **Backend** | Laravel 13, PHP 8.4 |
+| **Admin Panel** | Filament 5 (`auth:admin` guard, Cairo font, Teal/Slate theme) |
+| **Frontend** | Blade, Tailwind CSS 4, Vite 8 |
+| **Database** | MySQL (with isolated test database for Pest) |
+| **PDF Generation** | `carlos-meneses/laravel-mpdf` (Arabic A5 prescriptions) |
+| **Testing & Style** | Pest 5, Laravel Pint |
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Architecture Highlights
 
-## Security Vulnerabilities
+The business logic is cleanly encapsulated into single-responsibility **Action classes** and strongly typed **Backed Enums**:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```text
+app/
+├── Actions/
+│   ├── BookAppointmentAction.php       # Concurrency-safe queue numbering & appointment creation
+│   ├── CreateOnlineBookingAction.php   # Patient matching, duplicate prevention & admin notifications
+│   ├── GeneratePatientCodeAction.php   # Sequential PAT-YYYY-XXXX patient code generator
+│   ├── CheckInPatientAction.php        # Transition appointment from Booked -> Waiting
+│   ├── StartConsultationAction.php     # Transition to InConsultation & initialize Consultation
+│   ├── CompleteConsultationAction.php  # Save diagnosis, prescription items & mark Completed
+│   └── CollectAppointmentFeeAction.php # Issue invoice & mark appointment paid
+├── Enums/
+│   ├── AppointmentSource.php           # reception | online
+│   ├── AppointmentStatus.php           # booked | waiting | in_consultation | completed | cancelled | no_show
+│   ├── AppointmentType.php             # examination | follow_up | consultation (with default fees)
+│   ├── BloodGroup.php                  # A+, A-, B+, B-, AB+, AB-, O+, O-
+│   ├── Gender.php                      # male | female
+│   └── PaymentMethod.php               # cash | electronic methods
+├── Filament/
+│   ├── Resources/                      # Patients, Appointments, Consultations, Invoices, Medicines
+│   └── Widgets/
+│       └── ClinicStatsOverview.php     # Daily treasury, online bookings, waiting & completed counts
+└── Http/
+    ├── Controllers/
+    │   ├── OnlineBookingController.php
+    │   └── PrintPrescriptionController.php
+    └── Requests/
+        └── StoreOnlineBookingRequest.php
+```
+
+---
+
+## Routes Overview
+
+| Method | URI | Name / Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | `home` (Public) | Patient online booking portal |
+| `POST` | `/appointments/book` | `appointments.book` (Throttled) | Submit a new online booking |
+| `GET` | `/appointments/confirmation/{appointment}` | `appointments.confirmation` (Signed) | View & print booking confirmation ticket |
+| `GET` | `/appointments/track` | `appointments.track` (Public) | Track appointments by phone or patient code |
+| `POST` | `/appointments/{appointment}/cancel` | `appointments.cancel` (Signed) | Cancel a booked appointment & notify admins |
+| `GET` | `/admin` | Filament Panel (`auth:admin`) | Clinic administration dashboard |
+| `GET` | `/prescriptions/{prescription}/print` | `prescriptions.print` (`auth:admin`) | Render A5 Arabic PDF prescription |
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+- PHP `>= 8.3` (with `pdo_mysql`, `mbstring`, `gd`, `xml`)
+- Composer `>= 2.x`
+- Node.js `>= 20.x` & npm
+- MySQL `>= 8.0`
+
+### 1. Clone & Install Dependencies
+
+```bash
+git clone <your-repository-url> dr-code
+cd dr-code
+composer install
+npm install
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Update your database credentials in `.env`:
+
+```env
+APP_NAME="Dr.Code"
+APP_LOCALE=ar
+APP_FALLBACK_LOCALE=ar
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=dr-code
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
+
+### 3. Migrate, Seed & Build Assets
+
+```bash
+php artisan migrate --seed
+npm run build
+```
+
+### 4. Run Locally
+
+```bash
+composer run dev
+# or separately:
+php artisan serve
+npm run dev
+```
+
+### Default Admin Credentials (from `DatabaseSeeder`)
+
+| Field | Value |
+| :--- | :--- |
+| **Admin URL** | `http://localhost:8000/admin` |
+| **Email** | `admin@admin.com` |
+| **Password** | `123456789` |
+
+> **Security Note:** Change the default admin credentials immediately before deploying to production.
+
+---
+
+## Testing & Code Quality
+
+The project uses **Pest 5** for automated feature testing and **Laravel Pint** for PSR-12 / Laravel code style formatting.
+
+```bash
+# Run the test suite
+php artisan test --compact
+
+# Format code with Laravel Pint
+vendor/bin/pint --dirty
+```
+
+### Test Coverage Highlights (`tests/Feature/OnlineBookingTest.php`)
+- Public booking page rendering
+- New patient online booking, patient code generation, queue assignment & Filament admin database notification delivery
+- Returning patient phone normalization & same-day queue incrementing
+- Duplicate active booking prevention
+- Request validation & signed URL enforcement (`403` on tampered/unsigned confirmation or cancel URLs)
+- Patient booking tracking & cancellation with admin notification
+- End-to-end visibility of online bookings inside `/admin/appointments`
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT License](https://opensource.org/licenses/MIT).
