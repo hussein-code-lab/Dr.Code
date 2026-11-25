@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
 use App\Enums\AppointmentType;
 use Illuminate\Database\Eloquent\Model;
@@ -16,8 +17,10 @@ class Appointment extends Model
         'queue_number',
         'type',
         'status',
+        'source',
         'fee',
         'is_paid',
+        'notes',
     ];
 
     protected function casts(): array
@@ -26,6 +29,7 @@ class Appointment extends Model
             'appointment_date' => 'date',
             'type' => AppointmentType::class,
             'status' => AppointmentStatus::class,
+            'source' => AppointmentSource::class,
             'fee' => 'decimal:2',
             'is_paid' => 'boolean',
         ];

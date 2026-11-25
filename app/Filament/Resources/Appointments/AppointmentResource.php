@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Appointments;
 
+use App\Enums\AppointmentSource;
+use App\Enums\AppointmentStatus;
 use App\Filament\Resources\Appointments\Pages\CreateAppointment;
 use App\Filament\Resources\Appointments\Pages\EditAppointment;
 use App\Filament\Resources\Appointments\Pages\ListAppointments;
@@ -34,6 +36,25 @@ class AppointmentResource extends Resource
     protected static string|UnitEnum|null $navigationGroup = 'الاستقبال والحجوزات';
 
     protected static ?int $navigationSort = 2;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::whereDate('appointment_date', '>=', today())
+            ->where('status', AppointmentStatus::Booked)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $hasOnline = static::getModel()::whereDate('appointment_date', '>=', today())
+            ->where('status', AppointmentStatus::Booked)
+            ->where('source', AppointmentSource::Online)
+            ->exists();
+
+        return $hasOnline ? 'info' : 'warning';
+    }
 
     public static function form(Schema $schema): Schema
     {

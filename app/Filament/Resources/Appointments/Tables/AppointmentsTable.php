@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Appointments\Tables;
 use App\Actions\CheckInPatientAction;
 use App\Actions\CollectAppointmentFeeAction;
 use App\Actions\StartConsultationAction;
+use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Resources\Consultations\ConsultationResource;
@@ -13,6 +14,7 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -28,17 +30,18 @@ class AppointmentsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->defaultSort('queue_number', 'asc')
+            ->defaultSort('appointment_date', 'desc')
             ->columns([
                 TextColumn::make('queue_number')
                     ->label('الدور')
+                    ->prefix('#')
                     ->badge()
                     ->sortable(),
 
                 TextColumn::make('patient.name')
                     ->label('المريض')
                     ->searchable()
-                    ->description(fn (Appointment $record) => $record->patient->phone),
+                    ->description(fn (Appointment $record): string => $record->patient->phone),
 
                 TextColumn::make('appointment_date')
                     ->label('التاريخ')
@@ -47,6 +50,10 @@ class AppointmentsTable
 
                 TextColumn::make('type')
                     ->label('النوع')
+                    ->badge(),
+
+                TextColumn::make('source')
+                    ->label('المصدر')
                     ->badge(),
 
                 TextColumn::make('status')
@@ -60,12 +67,22 @@ class AppointmentsTable
                 TextColumn::make('fee')
                     ->label('القيمة')
                     ->money('EGP'),
+
+                TextColumn::make('notes')
+                    ->label('ملاحظات')
+                    ->limit(30)
+                    ->tooltip(fn (Appointment $record): ?string => $record->notes)
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Filter::make('today')
                     ->label('مواعيد اليوم فقط')
-                    ->default()
                     ->query(fn ($query) => $query->whereDate('appointment_date', today())),
+
+                SelectFilter::make('source')
+                    ->label('مصدر الحجز')
+                    ->options(AppointmentSource::class),
 
                 SelectFilter::make('status')
                     ->label('الحالة')
@@ -76,8 +93,8 @@ class AppointmentsTable
                     ->label('تسجيل وصول')
                     ->icon('heroicon-m-arrow-right-end-on-rectangle')
                     ->color('warning')
-                    ->visible(fn (Appointment $record) => $record->status === AppointmentStatus::Booked)
-                    ->action(function (Appointment $record) {
+                    ->visible(fn (Appointment $record): bool => $record->status === AppointmentStatus::Booked)
+                    ->action(function (Appointment $record): void {
                         app(CheckInPatientAction::class)->execute($record);
 
                         Notification::make()
@@ -90,7 +107,7 @@ class AppointmentsTable
                     ->label('بدء الكشف')
                     ->icon('heroicon-m-play')
                     ->color('success')
-                    ->visible(fn (Appointment $record) => in_array($record->status, [AppointmentStatus::Waiting, AppointmentStatus::InConsultation]))
+                    ->visible(fn (Appointment $record): bool => in_array($record->status, [AppointmentStatus::Waiting, AppointmentStatus::InConsultation]))
                     ->action(function (Appointment $record) {
                         $consultation = app(StartConsultationAction::class)->execute($record);
 
@@ -101,15 +118,15 @@ class AppointmentsTable
                     ->label('تحصيل الرسوم')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
-                    ->visible(fn ($record) => ! $record->is_paid)
+                    ->visible(fn (Appointment $record): bool => ! $record->is_paid && $record->status !== AppointmentStatus::Cancelled)
                     ->form([
                         Placeholder::make('patient_info')
                             ->label('المريض')
-                            ->content(fn ($record) => "{$record->patient?->name} ({$record->patient?->code})"),
+                            ->content(fn (Appointment $record): string => "{$record->patient?->name} ({$record->patient?->code})"),
 
                         TextInput::make('fee_display')
                             ->label('قيمة الكشف المقررة')
-                            ->default(fn ($record) => "{$record->fee} ج.م")
+                            ->default(fn (Appointment $record): string => "{$record->fee} ج.م")
                             ->disabled(),
 
                         Select::make('payment_method')
@@ -120,10 +137,9 @@ class AppointmentsTable
                     ])
                     ->modalHeading('تحصيل رسوم الكشف')
                     ->modalSubmitActionLabel('تأكيد السداد وإصدار الفاتورة')
-                    ->action(function ($record, array $data) {
+                    ->action(function (Appointment $record, array $data): void {
                         $feeAction = app(CollectAppointmentFeeAction::class);
 
-                        // التعامل مع القيمة سواء جاءت كـ Enum Object أو String
                         $paymentMethod = $data['payment_method'] instanceof PaymentMethod
                             ? $data['payment_method']
                             : PaymentMethod::from($data['payment_method']);
@@ -141,6 +157,24 @@ class AppointmentsTable
                             ->send();
                     }),
 
+                Action::make('cancel')
+                    ->label('إلغاء')
+                    ->icon('heroicon-m-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('إلغاء الموعد')
+                    ->modalDescription('هل أنت متأكد من إلغاء هذا الموعد؟')
+                    ->visible(fn (Appointment $record): bool => in_array($record->status, [AppointmentStatus::Booked, AppointmentStatus::Waiting]))
+                    ->action(function (Appointment $record): void {
+                        $record->update(['status' => AppointmentStatus::Cancelled]);
+
+                        Notification::make()
+                            ->title('تم إلغاء الموعد')
+                            ->warning()
+                            ->send();
+                    }),
+
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

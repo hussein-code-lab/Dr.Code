@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
 use App\Enums\AppointmentType;
 use App\Models\Appointment;
@@ -14,11 +15,13 @@ final class BookAppointmentAction
         int $patientId,
         Carbon|string $date,
         AppointmentType $type,
-        float $fee = 0.00
+        float $fee = 0.00,
+        AppointmentSource $source = AppointmentSource::Reception,
+        ?string $notes = null,
     ): Appointment {
         $formattedDate = Carbon::parse($date)->toDateString();
 
-        return DB::transaction(function () use ($patientId, $formattedDate, $type, $fee) {
+        return DB::transaction(function () use ($patientId, $formattedDate, $type, $fee, $source, $notes): Appointment {
             $nextQueue = Appointment::whereDate('appointment_date', $formattedDate)
                 ->lockForUpdate()
                 ->max('queue_number') + 1;
@@ -29,8 +32,10 @@ final class BookAppointmentAction
                 'queue_number' => $nextQueue,
                 'type' => $type,
                 'status' => AppointmentStatus::Booked,
+                'source' => $source,
                 'fee' => $fee,
                 'is_paid' => false,
+                'notes' => $notes,
             ]);
         });
     }

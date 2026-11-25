@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Appointment;
@@ -15,31 +16,26 @@ class ClinicStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        // إجمالي إيراد اليوم
         $todayRevenue = Invoice::whereDate('paid_at', today())->sum('amount');
 
-        // إيراد الكاش اليوم
         $todayCash = Invoice::whereDate('paid_at', today())
             ->where('payment_method', PaymentMethod::Cash)
             ->sum('amount');
 
-        // إيراد الإلكتروني (فيزا / محفظة)
         $todayElectronic = Invoice::whereDate('paid_at', today())
             ->where('payment_method', '!=', PaymentMethod::Cash)
             ->sum('amount');
 
-        // تحديد اسم عمود التاريخ الفعلي في جدول appointments
-        $dateColumn = (new Appointment)->getConnection()->getSchemaBuilder()->hasColumn('appointments', 'appointment_date')
-            ? 'appointment_date'
-            : ((new Appointment)->getConnection()->getSchemaBuilder()->hasColumn('appointments', 'scheduled_at') ? 'scheduled_at' : 'created_at');
-
-        // كشوفات اليوم
-        $todayAppointmentsCount = Appointment::whereDate($dateColumn, today())->count();
-        $waitingCount = Appointment::whereDate($dateColumn, today())
+        $todayAppointmentsCount = Appointment::whereDate('appointment_date', today())->count();
+        $waitingCount = Appointment::whereDate('appointment_date', today())
             ->where('status', AppointmentStatus::Waiting)
             ->count();
-        $completedCount = Appointment::whereDate($dateColumn, today())
+        $completedCount = Appointment::whereDate('appointment_date', today())
             ->where('status', AppointmentStatus::Completed)
+            ->count();
+        $upcomingOnlineCount = Appointment::whereDate('appointment_date', '>=', today())
+            ->where('source', AppointmentSource::Online)
+            ->where('status', AppointmentStatus::Booked)
             ->count();
 
         return [
@@ -47,6 +43,11 @@ class ClinicStatsOverview extends StatsOverviewWidget
                 ->description('كاش: '.number_format($todayCash, 0).' | إلكتروني: '.number_format($todayElectronic, 0))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
+
+            Stat::make('حجوزات إلكترونية جديدة', "{$upcomingOnlineCount} حجز")
+                ->description('حجوزات أونلاين بانتظار حضور المرضى')
+                ->descriptionIcon('heroicon-m-globe-alt')
+                ->color($upcomingOnlineCount > 0 ? 'info' : 'gray'),
 
             Stat::make('حالات الانتظار اليوم', "{$waitingCount} مريض")
                 ->description("من أصل {$todayAppointmentsCount} حجز اليوم")

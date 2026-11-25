@@ -28,4 +28,22 @@ enum AppointmentType: string implements HasColor, HasLabel
             self::Consultation => 'info',
         };
     }
+
+    public function defaultFee(): float
+    {
+        return match ($this) {
+            self::Examination => 300.00,
+            self::FollowUp => 150.00,
+            self::Consultation => 200.00,
+        };
+    }
+
+    public function getDescription(): string
+    {
+        return match ($this) {
+            self::Examination => 'فحص طبي شامل وتشخيص كامل مع كتابة الروشتة',
+            self::FollowUp => 'متابعة الحالة ومراجعة نتائج التحاليل والأشعة',
+            self::Consultation => 'استشارة طبية سريعة ومراجعة خطة العلاج',
+        };
+    }
 }

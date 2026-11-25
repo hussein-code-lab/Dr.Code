@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Appointments\Schemas;
 
+use App\Enums\AppointmentSource;
 use App\Enums\AppointmentType;
 use App\Enums\Gender;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -50,15 +52,26 @@ class AppointmentForm
                             ->default(AppointmentType::Examination)
                             ->required(),
 
+                        Select::make('source')
+                            ->label('مصدر الحجز')
+                            ->options(AppointmentSource::class)
+                            ->default(AppointmentSource::Reception)
+                            ->required(),
+
                         TextInput::make('fee')
                             ->label('سعر الكشف')
                             ->numeric()
                             ->prefix('EGP')
-                            ->default(0.00),
+                            ->default(300.00),
 
                         Toggle::make('is_paid')
                             ->label('تم السداد؟')
                             ->default(false),
+
+                        Textarea::make('notes')
+                            ->label('ملاحظات / سبب الزيارة')
+                            ->rows(3)
+                            ->columnSpanFull(),
                     ]),
             ]);
     }
